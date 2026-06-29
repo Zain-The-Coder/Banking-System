@@ -38,15 +38,15 @@ async function authSystemMiddleware (req , res , next) {
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
         if(!token) {
-            return res.send(401).json({
+            return res.status(401).json({
                 status : 401 ,
-                message : "Invaild Credentials , token not found !"
+                message : "Invaild Credentials , token not found !" ,
             })
         };
 
         try {
             const decoded = jwt.verify(token , process.env.JWT_SECRET);
-            const user = userModel.findById(decoded.id).select("+systemUser");
+            const user = await userModel.findById(decoded.id).select("+systemUser");
 
             if(!user.systemUser) {
                 return res.status(403).json({
@@ -58,13 +58,13 @@ async function authSystemMiddleware (req , res , next) {
             req.user = user ;
             return next();
         } catch (e) {
-            res.status(500).json({
+            return res.status(500).json({
                 status : 500 ,
                 message : e.message
             })
         }
     } catch (e) {
-    res.status(500).json({
+    return res.status(500).json({
                 status : 500 ,
                 message : e.message
             })

@@ -4,7 +4,9 @@ const accountController = require('../controllers/account.controller.js')
 
 const accountRouter = express.Router();
 
-accountRouter.post("/" , authMiddleware.authMiddleware , accountController.createAccount)
+accountRouter.get("/" , authMiddleware.authMiddleware , accountController.getUserAccounts);
+accountRouter.get("/balance/:accountId" , authMiddleware.authMiddleware , accountController.getAccountBalance)
+accountRouter.post("/" , authMiddleware.authMiddleware , accountController.createAccount);
 
 
 module.exports = accountRouter ;
