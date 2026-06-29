@@ -1,7 +1,8 @@
 const userModel = require('../models/user.model.js');
 const asyncHandler = require('../utils/asyncHandler.js');
 const jwt = require('jsonwebtoken');
-const emailService = require('../services/email.service.js')
+const emailService = require('../services/email.service.js');
+const tokenBlacklistModel = require('../models/blackList.model.js')
 
 
 const registerUser = asyncHandler(async (req , res) => {
@@ -76,4 +77,26 @@ const loginUser = asyncHandler(async (req , res) => {
 
 })
 
-module.exports = {registerUser , loginUser}
+const logout = asyncHandler(async (req , res) => {
+    const token = req.cookies.token || req.headers.authorizations?.split(" ")[1];
+
+    if(!token) {
+        return res.status(404).json({
+            status : 404 ,
+            message : "User logout Successfully !"
+        })
+    };
+
+    res.clearCookie("token")
+
+    await tokenBlacklistModel.create({
+        token : token
+    });
+
+    return res.status(200).json({
+        status : 200 ,
+        message : "User Logout Successfully !"
+    })
+})
+
+module.exports = {registerUser , loginUser , logout}

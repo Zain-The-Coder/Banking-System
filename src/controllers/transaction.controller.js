@@ -83,36 +83,57 @@ const initialTransaction = asyncHandler(async (req , res) => {
         })
     };
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+let transaction;
+    try {
 
-    const transaction = new transactionModel({
-        fromAccount ,
-        toAccount ,
-        amount ,
-        idempotencyKey ,
-        status : "PENDING"
-    });
+        /**
+         * 5. Create transaction (PENDING)
+         */
+        const session = await mongoose.startSession()
+        session.startTransaction()
 
-    const debitLedgerModel = await ledgerModel.create([{
-        account : fromAccount ,
-        amount : amount ,
-        transaction : transaction._id ,
-        type : "DEBIT"
-    }] , {session});
+        transaction = (await transactionModel.create([ {
+            fromAccount,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: "PENDING"
+        } ], { session }))[ 0 ]
 
-    const creditLedgerModel = await ledgerModel.create([{
-        account : toAccount ,
-        amount : amount ,
-        transaction : transaction._id ,
-        type : "CREDIT"
-    }] , {session});
+        const debitLedgerEntry = await ledgerModel.create([ {
+            account: fromAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "DEBIT"
+        } ], { session })
 
-    transaction.status = "COMPLETED" ;
-    await transaction.save({session});
+        await (() => {
+            return new Promise((resolve) => setTimeout(resolve, 15 * 1000));
+        })()
 
-    await session.commitTransaction();
-    session.endSession();
+        const creditLedgerEntry = await ledgerModel.create([ {
+            account: toAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "CREDIT"
+        } ], { session })
+
+        await transactionModel.findOneAndUpdate(
+            { _id: transaction._id },
+            { status: "COMPLETED" },
+            { session }
+        )
+
+
+        await session.commitTransaction()
+        session.endSession()
+    } catch (error) {
+
+        return res.status(400).json({
+            message: "Transaction is Pending due to some issue, please retry after sometime",
+        })
+
+    }
 
     sendTransactionEmail(req.user.email , req.user.name , amount , toAccount);
 
@@ -144,7 +165,9 @@ const { toAccount, amount, idempotencyKey } = req.body
         })
     }
 
-    const fromUserAccount = await accountModel.findOne({ userId: req.user._id });
+    const fromUserAccount = await accountModel.findOne({
+        user: req.user._id
+    })
 
     if (!fromUserAccount) {
         return res.status(400).json({
