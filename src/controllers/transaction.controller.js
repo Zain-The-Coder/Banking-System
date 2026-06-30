@@ -107,10 +107,6 @@ let transaction;
             type: "DEBIT"
         } ], { session })
 
-        await (() => {
-            return new Promise((resolve) => setTimeout(resolve, 15 * 1000));
-        })()
-
         const creditLedgerEntry = await ledgerModel.create([ {
             account: toAccount,
             amount: amount,
@@ -128,7 +124,8 @@ let transaction;
         await session.commitTransaction()
         session.endSession()
     } catch (error) {
-
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
             message: "Transaction is Pending due to some issue, please retry after sometime",
         })

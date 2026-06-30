@@ -28,7 +28,12 @@ const registerUser = asyncHandler(async (req , res) => {
     } , process.env.JWT_SECRET ,
     {expiresIn : "3d"})
 
-    res.cookie("token" , token);
+res.cookie("token", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+});
 
     res.status(201).json({
         status : 201 , 
@@ -66,8 +71,12 @@ const loginUser = asyncHandler(async (req , res) => {
     } , process.env.JWT_SECRET ,
     {expiresIn : "3d"})
 
-    res.cookie("token" , token);
-
+res.cookie("token", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+});
     res.status(200).json({
         status : 201 , 
         message : "Login Successfully !" ,
@@ -78,7 +87,7 @@ const loginUser = asyncHandler(async (req , res) => {
 })
 
 const logout = asyncHandler(async (req , res) => {
-    const token = req.cookies.token || req.headers.authorizations?.split(" ")[1];
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
     if(!token) {
         return res.status(404).json({
